@@ -460,12 +460,18 @@ impl<R: Iterator<Item = TokenAndOffset>> Parser<R> {
 
     fn parse_go_stmt(&mut self) -> PResult<ast::GoStmt> {
         trace!("parse_go_stmt");
-        unimplemented!()
+
+        try!(self.eat(TokenKind::Go));
+        Ok(ast::GoStmt { call: try!(self.parse_expr()) })
     }
+
     fn parse_defer_stmt(&mut self) -> PResult<ast::DeferStmt> {
         trace!("parse_defer_stmt");
-        unimplemented!()
+
+        try!(self.eat(TokenKind::Defer));
+        Ok(ast::DeferStmt { call: try!(self.parse_expr()) })
     }
+
     fn parse_return_stmt(&mut self) -> PResult<ast::ReturnStmt> {
         trace!("parse_return_stmt");
         try!(self.eat(TokenKind::Return));
