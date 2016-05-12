@@ -264,6 +264,41 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
         // IdentifierList = identifier { "," identifier } .
         // ExpressionList = Expression { "," Expression } .
 
+        let mut idents = Vec::new();
+        let mut exprs = Vec::new();
+
+        // Parse the identifier list
+        if let TokenKind::Ident = self.token.kind {
+            idents.push(try!(self.parse_ident()));
+            while let TokenKind::Comma = self.token.kind {
+                try!(self.eat(TokenKind::Comma));
+                idents.push(try!(self.parse_ident()));
+            }
+        }
+
+        // XXX: Type is optional, how to test?
+        let typ = match self.token.kind {
+            TokenKind::Ident |
+            TokenKind::Delim(Delim::LParen) => Some(try!(self.parse_type())),
+            _ => None,
+        };
+
+        if self.token.kind == TokenKind::Operator(Operator::Assign) {
+            self.bump();
+
+            // Parse the expression List
+            exprs.push(try!(self.parse_expr()));
+            while let TokenKind::Comma = self.token.kind {
+                try!(self.eat(TokenKind::Comma));
+                exprs.push(try!(self.parse_expr()));
+            }
+        }
+
+        /*Ok(ast::ConstSpec{
+            identifiers: idents,
+            typ: typ,
+            expressions: exprs,
+        })*/
         unimplemented!()
     }
 
