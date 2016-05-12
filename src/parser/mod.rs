@@ -194,6 +194,7 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
     /// Parse any number of top-level declarations (see TopLevelDecl docs).
     // Grammar:
     //
+    // Declaration   = ConstDecl | TypeDecl | VarDecl .
     // TopLevelDecl  = Declaration | FunctionDecl | MethodDecl .
     fn parse_top_level_decls(&mut self) -> PResult<Vec<ast::TopLevelDecl>> {
         trace!("parse_top_level_decls");
@@ -202,6 +203,13 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
         // FIXME: no loop + unfinished!
 
         match self.token.kind {
+            // Declaration -> const, type, var
+            TokenKind::Keyword(Keyword::Const) |
+            TokenKind::Keyword(Keyword::Type) |
+            TokenKind::Keyword(Keyword::Var) => {
+                let decl = try!(self.parse_decl_stmt());
+                decls.push(ast::TopLevelDecl::Statement(decl));
+            }
             // FunctionDecl
             TokenKind::Keyword(Keyword::Func) => {
                 let fd = try!(self.parse_func_decl());
@@ -215,6 +223,48 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
         }
 
         Ok(decls)
+    }
+
+    // Parse a constant declaration
+    fn parse_const_decl(&mut self) -> PResult<ast::ConstDecl> {
+        trace!("parse_const_decl");
+        // Grammar:
+        // ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
+        try!(self.eat(TokenKind::Keyword(Keyword::Const)));
+        let mut specs = Vec::new();
+
+        match self.token.kind {
+            // Multiple constant definition
+            TokenKind::Delim(Delim::LParen) => {
+                self.bump();
+                loop {
+                    match self.token.kind {
+                        TokenKind::Delim(Delim::RParen) => {
+                            break;
+                        }
+                        _ => {
+                            specs.push(try!(self.parse_const_spec()));
+                        }
+                    }
+                }
+            }
+            // Single constant
+            _ => specs.push(try!(self.parse_const_spec())),
+        }
+
+        try!(self.eat(TokenKind::Semicolon));
+        Ok(ast::ConstDecl { specs: specs })
+    }
+
+    // Parse a constant spec
+    fn parse_const_spec(&mut self) -> PResult<ast::ConstSpec> {
+        trace!("parse_const_spec");
+        // Grammar:
+        // ConstSpec      = IdentifierList [ [ Type ] "=" ExpressionList ] .
+        // IdentifierList = identifier { "," identifier } .
+        // ExpressionList = Expression { "," Expression } .
+
+        unimplemented!()
     }
 
     /// Parse a full function declaration (including signature, name, and block).
@@ -412,6 +462,7 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
 
     fn parse_block(&mut self) -> PResult<Vec<ast::Statement>> {
         trace!("parse_block");
+
         // Grammar:
         // Block = "{" StatementList "}" .
         // StatementList = { Statement ";" } .
@@ -505,9 +556,18 @@ impl<R: Iterator<Item = TokenAndSpan>> Parser<R> {
         trace!("parse_simple_stmt");
         unimplemented!()
     }
-    fn parse_decl_stmt(&mut self) -> PResult<ast::SimpleStmt> {
+    fn parse_decl_stmt(&mut self) -> PResult<ast::DeclStmt> {
         trace!("parse_decl_stmt");
-        unimplemented!()
+
+        Ok(match self.token.kind {
+            TokenKind::Keyword(Keyword::Const) => {
+                let cnst = try!(self.parse_const_decl());
+                return Ok(ast::DeclStmt::Const(cnst));
+            },
+            //TokenKind::Keyword(Keyword::Type) => TODO
+            //TokenKind::Keyword(Keyword::Var) => TODO
+            _ => panic!("Error parsing declaration"),
+        })
     }
 
     // XXX: error msg

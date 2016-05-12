@@ -331,13 +331,15 @@ pub struct MaybeQualifiedIdent {
     pub name: String,
 }
 
-// == Unimplemented types ==
-
 /// A constant declaration.
 ///
 /// Example: `const Pi float64 = 3.14159265358979323846`
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConstDecl;
+pub struct ConstDecl {
+    pub specs: Vec<ConstSpec>,
+}
+
+// == Unimplemented types ==
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MethodDecl;
